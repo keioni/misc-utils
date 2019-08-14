@@ -8,7 +8,7 @@
     # sg-ctrl remove proxy vpc-xxxxxxxxxxxxxxxxxxxxxx
 
 
-my $PROFILE = '--profile kyusan';
+my $PROFILE = '';
 my $FILTER = '';
 
 
