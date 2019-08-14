@@ -12,21 +12,21 @@ my $PROFILE = '';
 my $FILTER = '';
 
 
-# sub get_sg_name_from_id
-# {
-#     my $sg_id = shift;
-#     my $sg_name = `aws $PROFILE ec2 describe-security-groups --group-id $sg_id $VPC_ID --query 'SecurityGroups[].[GroupName]' --output text`;
-#     chomp($sg_name);
-#     return $sg_name;
-# }
+sub get_sg_name_from_id
+{
+    my $sg_id = shift;
+    my $sg_name = `aws $PROFILE ec2 describe-security-groups --group-id $sg_id $VPC_ID --query 'SecurityGroups[].[GroupName]' --output text`;
+    chomp($sg_name);
+    return $sg_name;
+}
 
-# sub get_sg_id_from_name
-# {
-#     my $sg_name = shift;
-#     my $sg_id = `aws $PROFILE ec2 describe-security-groups --group-name $sg_name $VPC_ID --query 'SecurityGroups[].[GroupId]' --output text`;
-#     chomp($sg_id);
-#     return $sg_id;
-# }
+sub get_sg_id_from_name
+{
+    my $sg_name = shift;
+    my $sg_id = `aws $PROFILE ec2 describe-security-groups --group-name $sg_name $VPC_ID --query 'SecurityGroups[].[GroupId]' --output text`;
+    chomp($sg_id);
+    return $sg_id;
+}
 
 
 sub get_security_groups
