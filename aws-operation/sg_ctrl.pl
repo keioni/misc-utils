@@ -85,12 +85,12 @@ sub get_network_interfaces
             $enis{$eni}{ipaddr} = $2;
             $enis{$eni}{instance_id} = $3;
         }
-        if ( /^(eni-\w+)\s+([\d\.]+)\s+None$/ ) {
+        elsif ( /^(eni-\w+)\s+([\d\.]+)\s+None$/ ) {
             $eni = $1;
             $enis{$eni}{ipaddr} = $2;
             $enis{$eni}{instance_id} = '';
         }
-        if ( /^(sg-\w+)\s+(.+)$/ ) {
+        elsif ( /^(sg-\w+)\s+(.+)$/ ) {
             push( @{$enis{$eni}{sg}}, $2 );
         }
     }
