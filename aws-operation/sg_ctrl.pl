@@ -15,7 +15,7 @@ my $FILTER = '';
 sub get_sg_name_from_id
 {
     my $sg_id = shift;
-    my $sg_name = `aws $PROFILE ec2 describe-security-groups --group-id $sg_id $VPC_ID --query 'SecurityGroups[].[GroupName]' --output text`;
+    my $sg_name = `aws $PROFILE ec2 describe-security-groups --group-id $sg_id $FILTER --query 'SecurityGroups[].[GroupName]' --output text`;
     chomp($sg_name);
     return $sg_name;
 }
@@ -23,7 +23,7 @@ sub get_sg_name_from_id
 sub get_sg_id_from_name
 {
     my $sg_name = shift;
-    my $sg_id = `aws $PROFILE ec2 describe-security-groups --group-name $sg_name $VPC_ID --query 'SecurityGroups[].[GroupId]' --output text`;
+    my $sg_id = `aws $PROFILE ec2 describe-security-groups --group-name $sg_name $FILTER --query 'SecurityGroups[].[GroupId]' --output text`;
     chomp($sg_id);
     return $sg_id;
 }
@@ -36,7 +36,7 @@ sub get_security_groups
     while (<P_CMD>) {
         chomp;
         if ( /^(sg-\w+)\s+([\w_-]+)$/ ) {
-            $sgs{$1} = $2;
+            $sgs{$2} = $1;
         }
     }
     close(P_CMD);
@@ -90,13 +90,49 @@ sub show_current_status
     }
 }
 
+sub make_recover_script
+{
+    my %instances = &get_instances();
+    my %enis = &get_network_interfaces();
+    my %sgs = &get_security_groups();
+
+    print "#!/bin/bash -x\n\n";
+
+    my $dt = `date`;
+    print "# generated at: $dt\n";
+
+    print "# all security groups:\n";
+    foreach my $sg_name (sort(keys(%sgs))) {
+        print "#   $sgs{$sg_name}: $sg_name\n";
+    }
+    print "\n";
+
+    foreach my $eni (sort(keys(%enis))) {
+        my $instance_name = $instances{$enis{$eni}{instance_id}};
+        my $ipaddr = $enis{$eni}{ipaddr};
+        my @sg_ids;
+        foreach my $sg_name ( @{$enis{$eni}{sg}} ) {
+            push( @sg_ids, $sgs{$sg_name} );
+        }
+        my $sg_names = join(' ', @{$enis{$eni}{sg}});
+        my $sg_ids = join(' ', @sg_ids);
+        print "# $eni $ipaddr $enis{$eni}{instance_id}($instance_name): $sg_names\n";
+        print "/usr/bin/aws ec2 modify-network-interface-attribute $FILTER --network-interface-id $eni --groups $sg_ids\n";
+    }
+
+}
+
 if ( @ARGV ) {
     my $cmd = shift;
+    my $vpc_id = shift;
+    if ( $vpc_id && $vpc_id =~ /^vpc-/ ) {
+        $FILTER = "--filter \"Name='vpc-id',Values='$vpc_id'\"";
+    }
+
     if ( $cmd =~ /show/i ) {
-        my $vpc_id = shift;
-        if ( $vpc_id && $vpc_id =~ /^vpc-/ ) {
-            $FILTER = "--filter \"Name='vpc-id',Values='$vpc_id'\"";
-        }
         &show_current_status();
+    }
+    elsif ( $cmd =~ /save|backup/i ) {
+        &make_recover_script();
     }
 }
