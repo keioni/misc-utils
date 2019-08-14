@@ -33,7 +33,7 @@ sub get_security_groups
     open(P_CMD, "aws ec2 describe-security-groups $FILTER --query 'SecurityGroups[].[GroupId, GroupName]' --output text |");
     while (<P_CMD>) {
         chomp;
-        if ( /^(sg-\w+)\s+([\w_-]+)$/ ) {
+        if ( /^(sg-\w+)\s+(.+)$/ ) {
             $sgs{$2} = $1;
         }
     }
@@ -67,7 +67,12 @@ sub get_network_interfaces
             $enis{$eni}{ipaddr} = $2;
             $enis{$eni}{instance_id} = $3;
         }
-        if ( /^(sg-\w+)\s+(\w+)$/ ) {
+        if ( /^(eni-\w+)\s+([\d\.]+)\s+None$/ ) {
+            $eni = $1;
+            $enis{$eni}{ipaddr} = $2;
+            $enis{$eni}{instance_id} = '';
+        }
+        if ( /^(sg-\w+)\s+(.+)$/ ) {
             push( @{$enis{$eni}{sg}}, $2 );
         }
     }
@@ -81,10 +86,17 @@ sub show_current_status
     my %enis = &get_network_interfaces();
 
     foreach my $eni ( sort keys %enis ) {
-        my $instance_name = $instances{$enis{$eni}{instance_id}};
+        my $instance_info = '(unattached)';
+        if ( exists($instances{$enis{$eni}{instance_id}}) && $instances{$enis{$eni}{instance_id}} ) {
+            my $instance_name = $instances{$enis{$eni}{instance_id}};
+            $instance_info = "$enis{$eni}{instance_id}($instance_name)";
+        }
         my $ipaddr = $enis{$eni}{ipaddr};
-        my $sgs = join(' ', @{$enis{$eni}{sg}});
-        print "$eni $ipaddr $enis{$eni}{instance_id}($instance_name): $sgs\n";
+        my $sgs = '';
+        if ( exists($enis{$eni}{sg}) &&  @{$enis{$eni}{sg}} ) {
+            $sgs = join(' ', @{$enis{$eni}{sg}});
+        }
+        print "$eni $ipaddr $instance_info: $sgs\n";
     }
 }
 
@@ -115,7 +127,11 @@ sub make_recover_script
     }
 
     foreach my $eni (sort(keys(%enis))) {
-        my $instance_name = $instances{$enis{$eni}{instance_id}};
+        my $instance_info = '(unattached)';
+        if ( exists($instances{$enis{$eni}{instance_id}}) && $instances{$enis{$eni}{instance_id}} ) {
+            my $instance_name = $instances{$enis{$eni}{instance_id}};
+            $instance_info = "$enis{$eni}{instance_id}($instance_name)";
+        }
         my $ipaddr = $enis{$eni}{ipaddr};
         my @sg_ids;
         foreach my $sg_name ( @{$enis{$eni}{sg}} ) {
@@ -123,7 +139,8 @@ sub make_recover_script
         }
         my $sg_names = join(' ', @{$enis{$eni}{sg}});
         my $sg_ids = join(' ', @sg_ids);
-        print "# $eni $ipaddr $enis{$eni}{instance_id}($instance_name): $sg_names\n";
+        next if ( ! $sg_names );
+        print "# $eni $ipaddr $instance_info: $sg_names\n";
         print "/usr/bin/aws ec2 modify-network-interface-attribute $FILTER --network-interface-id $eni --groups $sg_ids\n";
     }
 
