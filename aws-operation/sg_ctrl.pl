@@ -27,31 +27,47 @@ sub get_sg_id_from_name
     return $sg_id;
 }
 
+sub run_cli
+{
+    my $subcmd = shift;
+    my $query = shift;
+    my @result;
+    open(P_CMD, "aws ec2 $subcmd $FILTER --query '$query' --output text |");
+    while (<P_CMD>) {
+        chomp;
+        push(@result, $_);
+    }
+    close(P_CMD);
+    return @result;
+}
+
 sub get_security_groups
 {
     my %sgs;
-    open(P_CMD, "aws ec2 describe-security-groups $FILTER --query 'SecurityGroups[].[GroupId, GroupName]' --output text |");
-    while (<P_CMD>) {
-        chomp;
+    my @result = &run_cli(
+        'describe-security-groups',
+        'SecurityGroups[].[GroupId, GroupName]'
+    );
+    foreach (@result) {
         if ( /^(sg-\w+)\s+(.+)$/ ) {
             $sgs{$2} = $1;
         }
     }
-    close(P_CMD);
     return %sgs;
 }
 
 sub get_instances
 {
     my %instances;
-    open(P_CMD, "aws ec2 describe-instances $FILTER --query 'Reservations[].Instances[].[InstanceId, Tags[?Key==`Name`].Value|[0]]' --output text |");
-    while (<P_CMD>) {
-        chomp;
-        if ( /^(i-\w+)\s+([\w_-]+)$/ ) {
+    my @result = &run_cli(
+        'describe-instances',
+        'Reservations[].Instances[].[InstanceId, Tags[?Key==`Name`].Value|[0]]'
+    );
+    foreach (@result) {
+        if ( /^(i-\w+)\s+(.+)$/ ) {
             $instances{$1} = $2;
         }
     }
-    close(P_CMD);
     return %instances;
 }
 
@@ -59,9 +75,11 @@ sub get_network_interfaces
 {
     my %enis;
     my $eni;
-    open(P_CMD, "aws ec2 describe-network-interfaces $FILTER --query 'NetworkInterfaces[].[NetworkInterfaceId, PrivateIpAddress, Attachment.InstanceId, Groups]' --output text |");
-    while (<P_CMD>) {
-        chomp;
+    my @result = &run_cli(
+        'describe-network-interfaces',
+        'NetworkInterfaces[].[NetworkInterfaceId, PrivateIpAddress, Attachment.InstanceId, Groups]'
+    );
+    foreach (@result) {
         if ( /^(eni-\w+)\s+([\d\.]+)\s+(i-\w+)$/ ) {
             $eni = $1;
             $enis{$eni}{ipaddr} = $2;
@@ -76,7 +94,6 @@ sub get_network_interfaces
             push( @{$enis{$eni}{sg}}, $2 );
         }
     }
-    close(P_CMD);
     return %enis;
 }
 
