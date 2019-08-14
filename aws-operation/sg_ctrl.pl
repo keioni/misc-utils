@@ -27,7 +27,6 @@ sub get_sg_id_from_name
     return $sg_id;
 }
 
-
 sub get_security_groups
 {
     my %sgs;
@@ -91,6 +90,7 @@ sub show_current_status
 
 sub make_recover_script
 {
+    my $vpc_id = shift;
     my %instances = &get_instances();
     my %enis = &get_network_interfaces();
     my %sgs = &get_security_groups();
@@ -103,7 +103,8 @@ sub make_recover_script
     print "#   id: " . `id`;
     print "\n";
 
-    print "# all security groups:\n";
+    my $vpc_info = $vpc_id ? "at $vpc_id" : 'at all vpcs';
+    print "# all security groups $vpc_info:\n";
     foreach my $sg_name (sort(keys(%sgs))) {
         print "#   $sgs{$sg_name}: $sg_name\n";
     }
@@ -128,17 +129,39 @@ sub make_recover_script
 
 }
 
-if ( @ARGV ) {
-    my $cmd = shift;
-    my $vpc_id = shift;
-    if ( $vpc_id && $vpc_id =~ /^vpc-/ ) {
-        $FILTER = "--filter \"Name='vpc-id',Values='$vpc_id'\"";
+sub parse_options
+{
+    my $cmd;
+    my $vpc_id;
+    foreach my $args ( @ARGV ) {
+        if ( ! $cmd ) {
+            $cmd = $args;
+        }
+        elsif ( $args =~ /^vpc-/ ) {
+            $vpc_id = $args;
+        }
     }
 
-    if ( $cmd =~ /show/i ) {
-        &show_current_status();
+    if ( ! $cmd ) {
+        $cmd = 'show';
     }
-    elsif ( $cmd =~ /save|backup/i ) {
-        &make_recover_script();
+    if ( $vpc_id ) {
+        $FILTER = "--filter \"Name='vpc-id',Values='$vpc_id'\"";
     }
+    return ($cmd, $vpc_id);
+}
+
+
+my ($cmd, $vpc_id) = &parse_options();
+if ( $cmd =~ /show/i ) {
+    &show_current_status();
+}
+elsif ( $cmd =~ /save|backup/i ) {
+    &make_recover_script($vpc_id);
+}
+elsif ( $cmd =~ /add|on|set/i ) {
+
+}
+elsif ( $cmd =~ /delete|remove|off|unset/i ) {
+
 }
