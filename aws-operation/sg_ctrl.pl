@@ -98,14 +98,21 @@ sub make_recover_script
 
     print "#!/bin/bash -x\n\n";
 
-    my $dt = `date`;
-    print "# generated at: $dt\n";
+    print "# generated information:\n";
+    print "#   date: " . `date`;
+    print "#   uname: " . `uname -snrv`;
+    print "#   id: " . `id`;
+    print "\n";
 
     print "# all security groups:\n";
     foreach my $sg_name (sort(keys(%sgs))) {
         print "#   $sgs{$sg_name}: $sg_name\n";
     }
     print "\n";
+
+    if ( $ENV{AWS_DEFAULT_PROFILE} ) {
+        print "export AWS_DEFAULT_PROFILE=$ENV{AWS_DEFAULT_PROFILE}\n\n";
+    }
 
     foreach my $eni (sort(keys(%enis))) {
         my $instance_name = $instances{$enis{$eni}{instance_id}};
