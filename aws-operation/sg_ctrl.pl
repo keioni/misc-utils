@@ -3,10 +3,6 @@
     use strict;
     use warnings;
 
-    # sg-ctrl show vpc-xxxxxxxxxxxxxxxxxx
-    # sg-ctrl add proxy vpc-xxxxxxxxxxxxxxxxxxxxx
-    # sg-ctrl remove proxy vpc-xxxxxxxxxxxxxxxxxxxxxx
-
 
     my $FILTER = '';
 
