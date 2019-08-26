@@ -3,6 +3,11 @@ import json
 from datetime import datetime
 
 
+def is_true(bexp):
+  if type(bexp) == str:
+    return bexp.lower() in ('true', 'yes', 'on', 'enable')
+  return bool(bexp)
+
 def json_dt(object):
   if isinstance(object, datetime):
     return object.isoformat()
@@ -27,10 +32,7 @@ def pickup_targets(resp, target_user, target_time):
 def do_stop(client, instance, dry_run = ''):
   instance_id = instance['InstanceId']
   instance_name = get_tag_value(instance['Tags'], 'Name')
-  if dry_run:
-    dry_run = True
-  else:
-    dry_run = False
+  dry_run = is_true(dry_run)
   try:
     result = client.stop_instances(
       InstanceIds=[instance_id],
@@ -39,7 +41,7 @@ def do_stop(client, instance, dry_run = ''):
     print(F'Stopping {instance_name} -> {result}')
     return True
   except Exception as e:
-    if e.response['Error']['Code'] == 'DryRunOperation':
+    if e.response['Error']['Code'] == 'DryRunOperation': # pylint: disable=no-member
       print(F'Skipped dry run: {instance_name}')
       return True
     print(F'Failed stopping {instance_name} -> {e.args}')
