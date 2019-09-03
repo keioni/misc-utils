@@ -48,13 +48,6 @@ def normalize_result(resp):
       result[service_name] = cost
   return result
 
-def get_1st_day_of_this_month(tz):
-  dt_now = datetime.datetime.now(tz)
-  dt_1st_day = datetime.datetime(
-    dt_now.year, dt_now.month, 1, 0, 0, 0, 0
-  )
-  return dt_1st_day
-
 def get_time_period(stat_type):
   tz_jst = datetime.timezone(datetime.timedelta(hours=9))
   if stat_type == 'daily':
