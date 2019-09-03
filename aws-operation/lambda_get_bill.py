@@ -13,7 +13,11 @@ def notify_to_slack(cost, target_date):
   for k, v in sorted(cost.items()):
     items.append('{}: {:.6f}'.format(k, float(v)))
   msg = {
-    "text": "*{} daily cost:*\n\n{}".format(target_date, '\n'.join(items))
+    "text": "*{} {} daily cost:*\n\n{}".format(
+      os.environ.get('SYSTEM_ENV', ''),
+      target_date,
+      '\n'.join(items)
+    )
   }
   posting_data = ("payload=" + json.dumps(msg)).encode('utf-8')
   request = urllib.request.Request(
@@ -36,7 +40,8 @@ def normalize_result(resp):
   return result
 
 def get_time_period():
-  dt_end = datetime.datetime.now()
+  tz_jst = datetime.timezone(datetime.timedelta(hours=9))
+  dt_end = datetime.datetime.now(tz_jst)
   dt_start = dt_end - datetime.timedelta(days=1)
   time_period = OrderedDict()
   # time_period = dict()
